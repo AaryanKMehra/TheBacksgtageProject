@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stage Lead | Analytics</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        #timer-display { font-size: 4rem; font-family: monospace; margin: 1rem 0; font-weight: 200; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">STAGE LEAD</div>
+        <ul>
+            <li><a href="index.html">Vault</a></li>
+            <li><a href="props.html">Stage Map</a></li>
+            <li><a href="cues.html">Cues</a></li>
+            <li><a href="analytics.html" class="active">Analytics</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <h1>Performance Analytics</h1>
+        
+        <div class="stats-grid">
+            <div class="card">
+                <h3>Scene Timing</h3>
+                <div id="timer-display">00:00:00</div>
+                <button id="timerBtn" onclick="toggleTimer()">Start Rehearsal</button>
+                <button onclick="resetTimer()" style="background:none; color:#fff; border:1px solid #333; margin-left:10px;">Reset</button>
+            </div>
+
+            <div class="card">
+                <h3>Director's Notes</h3>
+                <textarea id="notesVault" placeholder="Adjustments for Faith or Aman..." style="height: 120px;"></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Production Summary</h3>
+            <p id="summaryText">No rehearsal data recorded yet.</p>
+        </div>
+    </main>
+
+    <script>
+        let startTime;
+        let timerInterval;
+        let running = false;
+
+        const notes = document.getElementById('notesVault');
+        notes.value = localStorage.getItem('directorNotes') || "";
+        notes.oninput = () => localStorage.setItem('directorNotes', notes.value);
+
+        function toggleTimer() {
+            const btn = document.getElementById('timerBtn');
+            if (!running) {
+                running = true;
+                btn.innerText = "Stop Rehearsal";
+                startTime = Date.now() - (parseInt(localStorage.getItem('elapsedTime')) || 0);
+                timerInterval = setInterval(updateDisplay, 1000);
+            } else {
+                running = false;
+                btn.innerText = "Resume Rehearsal";
+                clearInterval(timerInterval);
+                updateSummary();
+            }
+        }
+
+        function updateDisplay() {
+            const elapsed = Date.now() - startTime;
+            localStorage.setItem('elapsedTime', elapsed);
+            const d = new Date(elapsed);
+            const h = String(d.getUTCHours()).padStart(2, '0');
+            const m = String(d.getUTCMinutes()).padStart(2, '0');
+            const s = String(d.getUTCSeconds()).padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${h}:${m}:${s}`;
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            running = false;
+            localStorage.setItem('elapsedTime', 0);
+            document.getElementById('timer-display').innerText = "00:00:00";
+            document.getElementById('timerBtn').innerText = "Start Rehearsal";
+        }
+
+        function updateSummary() {
+            const cues = JSON.parse(localStorage.getItem('liveCues')) || [];
+            const done = cues.filter(c => c.done).length;
+            document.getElementById('summaryText').innerText = 
+                `Current session: ${done}/${cues.length} cues completed. Check your notes for specific adjustments.`;
+        }
+
+        window.onload = updateSummary;
+    </script>
+</body>
+</html>

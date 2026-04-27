@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stage Lead | Cue Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .cue-container { display: flex; flex-direction: column; gap: 1rem; }
+        .cue-row { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.5rem; border-left: 4px solid var(--border); transition: 0.3s;
+        }
+        .cue-row.completed { border-left-color: #222; opacity: 0.3; }
+        .cue-row.active { border-left-color: #fff; background: var(--surface); }
+        .cue-info { flex-grow: 1; margin-left: 1rem; }
+        .status-btn { background: none; border: 1px solid var(--border); color: #fff; font-size: 0.8rem; }
+        .status-btn.done { background: #fff; color: #000; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">STAGE LEAD</div>
+        <ul>
+            <li><a href="index.html">Vault</a></li>
+            <li><a href="props.html">Stage Map</a></li>
+            <li><a href="cues.html" class="active">Cues</a></li>
+            <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <h1>Live Cue Sheet</h1>
+        <div class="card">
+            <div class="input-group" style="display: flex; gap: 10px; margin-bottom: 2rem;">
+                <input type="text" id="cueDesc" placeholder="e.g., Blackout / Sound Cue 1" style="flex-grow:1; background:#000; border:1px solid #333; color:#fff; padding:10px;">
+                <button onclick="addLiveCue()">Add Cue</button>
+            </div>
+            <div id="cue-list" class="cue-container">
+                </div>
+        </div>
+    </main>
+
+    <script>
+        function renderCues() {
+            const list = document.getElementById('cue-list');
+            const cues = JSON.parse(localStorage.getItem('liveCues')) || [];
+            list.innerHTML = cues.map((cue, idx) => `
+                <div class="cue-row ${cue.done ? 'completed' : 'active'}">
+                    <div class="cue-info">
+                        <strong>CUE ${idx + 1}</strong>: ${cue.text}
+                    </div>
+                    <button class="status-btn ${cue.done ? 'done' : ''}" onclick="toggleCue(${idx})">
+                        ${cue.done ? 'COMPLETED' : 'MARK DONE'}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addLiveCue() {
+            const input = document.getElementById('cueDesc');
+            if (!input.value) return;
+            const cues = JSON.parse(localStorage.getItem('liveCues')) || [];
+            cues.push({ text: input.value, done: false });
+            localStorage.setItem('liveCues', JSON.stringify(cues));
+            input.value = '';
+            renderCues();
+        }
+
+        function toggleCue(idx) {
+            const cues = JSON.parse(localStorage.getItem('liveCues'));
+            cues[idx].done = !cues[idx].done;
+            localStorage.setItem('liveCues', JSON.stringify(cues));
+            renderCues();
+        }
+
+        window.onload = renderCues;
+    </script>
+</body>
+</html>

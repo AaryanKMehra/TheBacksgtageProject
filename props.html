@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Stage Lead | Stage Map</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        #stage-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+            background: #222;
+            border: 1px solid #444;
+            aspect-ratio: 1.5 / 1;
+        }
+        .cell {
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .cell:hover { background: #111; }
+        .cell.active { background: #fff; color: #000; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">STAGE LEAD</div>
+        <ul>
+            <li><a href="index.html">Vault</a></li>
+            <li><a href="props.html" class="active">Stage Map</a></li>
+            <li><a href="cues.html">Cues</a></li>
+            <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <h1>Stage Prop Visualizer</h1>
+        <div class="card">
+            <div id="stage-grid"></div>
+        </div>
+        <button onclick="clearMap()">Reset Layout</button>
+    </main>
+
+    <script>
+        const grid = document.getElementById('stage-grid');
+        const savedData = JSON.parse(localStorage.getItem('propLayout')) || {};
+
+        // Generate 100 cells for the 10x10 grid
+        for (let i = 0; i < 100; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            if (savedData[i]) {
+                cell.classList.add('active');
+                cell.innerText = 'PROP';
+            }
+
+            cell.addEventListener('click', () => {
+                cell.classList.toggle('active');
+                cell.innerText = cell.classList.contains('active') ? 'PROP' : '';
+                updateStorage();
+            });
+            grid.appendChild(cell);
+        }
+
+        function updateStorage() {
+            const layout = {};
+            document.querySelectorAll('.cell').forEach((c, idx) => {
+                if (c.classList.contains('active')) layout[idx] = true;
+            });
+            localStorage.setItem('propLayout', JSON.stringify(layout));
+        }
+
+        function clearMap() {
+            document.querySelectorAll('.cell').forEach(c => {
+                c.classList.remove('active');
+                c.innerText = '';
+            });
+            localStorage.removeItem('propLayout');
+        }
+    </script>
+</body>
+</html>
