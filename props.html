@@ -2,84 +2,117 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Stage Lead | Stage Map</title>
+    <title>Map | Stage Lead Studio</title>
     <link rel="stylesheet" href="css/style.css">
-    <style>
-        #stage-grid {
-            display: grid;
-            grid-template-columns: repeat(10, 1fr);
-            gap: 2px;
-            background: #222;
-            border: 1px solid #444;
-            aspect-ratio: 1.5 / 1;
-        }
-        .cell {
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            cursor: pointer;
-        }
-        .cell:hover { background: #111; }
-        .cell.active { background: #fff; color: #000; font-weight: bold; }
-    </style>
 </head>
 <body>
     <nav>
         <div class="logo">STAGE LEAD</div>
         <ul>
             <li><a href="index.html">Vault</a></li>
-            <li><a href="props.html" class="active">Stage Map</a></li>
+            <li><a href="props.html" class="active">Map</a></li>
             <li><a href="cues.html">Cues</a></li>
             <li><a href="analytics.html">Analytics</a></li>
         </ul>
     </nav>
 
     <main>
-        <h1>Stage Prop Visualizer</h1>
-        <div class="card">
+        <div class="section-header">
+            <h1>Stage Layout & Blocking</h1>
+        </div>
+
+        <div class="studio-card" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
+            <div class="input-group">
+                <label style="display:block; font-size:0.6rem; margin-bottom:5px; color:var(--accent-grey);">STAGE WIDTH (COLS)</label>
+                <input type="number" id="gridW" value="8" min="2" max="20" style="width:80px;">
+            </div>
+            <div class="input-group">
+                <label style="display:block; font-size:0.6rem; margin-bottom:5px; color:var(--accent-grey);">STAGE DEPTH (ROWS)</label>
+                <input type="number" id="gridH" value="6" min="2" max="20" style="width:80px;">
+            </div>
+            <button onclick="buildStage()">Update Dimensions</button>
+        </div>
+
+        <div class="studio-card" style="display: flex; gap: 15px; align-items: center; border-color: var(--accent-white);">
+            <select id="tool">
+                <option value="prop">Furniture/Prop</option>
+                <option value="person">Cast Member</option>
+                <option value="moving">Movement Path</option>
+            </select>
+            <input type="text" id="label" placeholder="Identifier (e.g., Chair A / Aman)">
+            <p style="font-size:0.7rem; color:var(--accent-grey);">Mode: Click to Place / Click to Remove</p>
+        </div>
+
+        <div id="stage-grid-container">
             <div id="stage-grid"></div>
         </div>
-        <button onclick="clearMap()">Reset Layout</button>
+
+        <div style="margin-top: 2rem;">
+            <button class="secondary" onclick="clearStage()">Wipe Blueprint</button>
+        </div>
     </main>
 
     <script>
-        const grid = document.getElementById('stage-grid');
-        const savedData = JSON.parse(localStorage.getItem('propLayout')) || {};
+        const gridElement = document.getElementById('stage-grid');
+        let stageData = JSON.parse(localStorage.getItem('studioMapData')) || {};
 
-        // Generate 100 cells for the 10x10 grid
-        for (let i = 0; i < 100; i++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            if (savedData[i]) {
-                cell.classList.add('active');
-                cell.innerText = 'PROP';
+        function buildStage() {
+            const w = document.getElementById('gridW').value;
+            const h = document.getElementById('gridH').value;
+            
+            gridElement.style.gridTemplateColumns = `repeat(${w}, 1fr)`;
+            gridElement.style.width = `${w * 60}px`; // Responsive but controlled sizing
+            
+            gridElement.innerHTML = '';
+            const totalCells = w * h;
+
+            for (let i = 0; i < totalCells; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                
+                // Persistence Check
+                if (stageData[i]) {
+                    applyCellState(cell, stageData[i].type, stageData[i].label);
+                }
+
+                cell.onclick = () => {
+                    if (cell.dataset.active === "true") {
+                        removeCellState(cell, i);
+                    } else {
+                        const type = document.getElementById('tool').value;
+                        const label = document.getElementById('label').value || "";
+                        applyCellState(cell, type, label);
+                        stageData[i] = { type, label };
+                    }
+                    localStorage.setItem('studioMapData', JSON.stringify(stageData));
+                };
+                gridElement.appendChild(cell);
             }
-
-            cell.addEventListener('click', () => {
-                cell.classList.toggle('active');
-                cell.innerText = cell.classList.contains('active') ? 'PROP' : '';
-                updateStorage();
-            });
-            grid.appendChild(cell);
         }
 
-        function updateStorage() {
-            const layout = {};
-            document.querySelectorAll('.cell').forEach((c, idx) => {
-                if (c.classList.contains('active')) layout[idx] = true;
-            });
-            localStorage.setItem('propLayout', JSON.stringify(layout));
+        function applyCellState(cell, type, label) {
+            cell.className = `cell ${type}`;
+            cell.innerText = label;
+            cell.dataset.active = "true";
         }
 
-        function clearMap() {
-            document.querySelectorAll('.cell').forEach(c => {
-                c.classList.remove('active');
-                c.innerText = '';
-            });
-            localStorage.removeItem('propLayout');
+        function removeCellState(cell, index) {
+            cell.className = 'cell';
+            cell.innerText = '';
+            cell.dataset.active = "false";
+            delete stageData[index];
         }
+
+        function clearStage() {
+            if(confirm("Clear current stage blueprint?")) {
+                stageData = {};
+                localStorage.removeItem('studioMapData');
+                buildStage();
+            }
+        }
+
+        // Initial Build
+        window.onload = buildStage;
     </script>
 </body>
 </html>

@@ -2,11 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Stage Lead | Analytics</title>
+    <title>Analytics | Stage Lead Studio</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        #timer-display { font-size: 4rem; font-family: monospace; margin: 1rem 0; font-weight: 200; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        #timer-display {
+            font-size: 5rem;
+            font-weight: 200;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 2rem 0;
+            letter-spacing: -2px;
+        }
+
+        .note-vault {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        #notesArea {
+            flex-grow: 1;
+            background: #000;
+            border: 1px solid var(--border-subtle);
+            color: var(--accent-white);
+            padding: 1.5rem;
+            font-family: var(--font-main);
+            resize: none;
+            line-height: 1.8;
+        }
+
+        .summary-metric {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-grey);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        @media (max-width: 900px) {
+            .analytics-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -14,85 +59,115 @@
         <div class="logo">STAGE LEAD</div>
         <ul>
             <li><a href="index.html">Vault</a></li>
-            <li><a href="props.html">Stage Map</a></li>
+            <li><a href="props.html">Map</a></li>
             <li><a href="cues.html">Cues</a></li>
             <li><a href="analytics.html" class="active">Analytics</a></li>
         </ul>
     </nav>
 
     <main>
-        <h1>Performance Analytics</h1>
-        
-        <div class="stats-grid">
-            <div class="card">
-                <h3>Scene Timing</h3>
+        <div class="section-header">
+            <h1>Performance Analytics</h1>
+        </div>
+
+        <div class="analytics-grid">
+            <div class="studio-card">
+                <div class="summary-metric">Active Run Time</div>
                 <div id="timer-display">00:00:00</div>
-                <button id="timerBtn" onclick="toggleTimer()">Start Rehearsal</button>
-                <button onclick="resetTimer()" style="background:none; color:#fff; border:1px solid #333; margin-left:10px;">Reset</button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="startBtn" onclick="toggleTimer()">Start Session</button>
+                    <button class="secondary" onclick="resetTimer()">Reset</button>
+                </div>
             </div>
 
-            <div class="card">
-                <h3>Director's Notes</h3>
-                <textarea id="notesVault" placeholder="Adjustments for Faith or Aman..." style="height: 120px;"></textarea>
+            <div class="studio-card note-vault">
+                <div class="summary-metric">Director's Note Vault</div>
+                <textarea id="notesArea" placeholder="Log adjustments for Aman, Faith, and the technical crew..."></textarea>
             </div>
         </div>
 
-        <div class="card">
-            <h3>Production Summary</h3>
-            <p id="summaryText">No rehearsal data recorded yet.</p>
+        <div class="studio-card">
+            <div class="summary-metric">Production Status Summary</div>
+            <div style="display: flex; gap: 40px; margin-top: 1rem;">
+                <div>
+                    <div class="summary-metric">Cues Executed</div>
+                    <div id="cue-stat" class="metric-value">0 / 0</div>
+                </div>
+                <div>
+                    <div class="summary-metric">Stage Complexity</div>
+                    <div id="prop-stat" class="metric-value">0 Elements</div>
+                </div>
+            </div>
         </div>
     </main>
 
     <script>
-        let startTime;
-        let timerInterval;
-        let running = false;
+        let timerRunning = false;
+        let timeElapsed = parseInt(localStorage.getItem('studioTime')) || 0;
+        let interval;
 
-        const notes = document.getElementById('notesVault');
-        notes.value = localStorage.getItem('directorNotes') || "";
-        notes.oninput = () => localStorage.setItem('directorNotes', notes.value);
+        // Initialize Notes and Data
+        window.onload = () => {
+            const notes = document.getElementById('notesArea');
+            notes.value = localStorage.getItem('studioNotes') || "";
+            
+            // Auto-save notes
+            notes.oninput = () => localStorage.setItem('studioNotes', notes.value);
+            
+            updateDisplay();
+            calculateSummary();
+        };
 
         function toggleTimer() {
-            const btn = document.getElementById('timerBtn');
-            if (!running) {
-                running = true;
-                btn.innerText = "Stop Rehearsal";
-                startTime = Date.now() - (parseInt(localStorage.getItem('elapsedTime')) || 0);
-                timerInterval = setInterval(updateDisplay, 1000);
+            const btn = document.getElementById('startBtn');
+            if (!timerRunning) {
+                timerRunning = true;
+                btn.innerText = "Stop Session";
+                btn.style.background = "var(--movement-blue)";
+                btn.style.color = "#fff";
+                interval = setInterval(() => {
+                    timeElapsed++;
+                    localStorage.setItem('studioTime', timeElapsed);
+                    updateDisplay();
+                }, 1000);
             } else {
-                running = false;
-                btn.innerText = "Resume Rehearsal";
-                clearInterval(timerInterval);
-                updateSummary();
+                timerRunning = false;
+                btn.innerText = "Resume Session";
+                btn.style.background = "var(--accent-white)";
+                btn.style.color = "var(--bg-deep)";
+                clearInterval(interval);
             }
         }
 
         function updateDisplay() {
-            const elapsed = Date.now() - startTime;
-            localStorage.setItem('elapsedTime', elapsed);
-            const d = new Date(elapsed);
-            const h = String(d.getUTCHours()).padStart(2, '0');
-            const m = String(d.getUTCMinutes()).padStart(2, '0');
-            const s = String(d.getUTCSeconds()).padStart(2, '0');
-            document.getElementById('timer-display').innerText = `${h}:${m}:${s}`;
+            const h = String(Math.floor(timeElapsed / 3600)).padStart(2, '0');
+            const m = String(Math.floor((timeElapsed % 3600) / 60)).padStart(2, '0');
+            const s = String(timeElapsed % 60).padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${h}:${m}:${secs = s}`;
         }
 
         function resetTimer() {
-            clearInterval(timerInterval);
-            running = false;
-            localStorage.setItem('elapsedTime', 0);
-            document.getElementById('timer-display').innerText = "00:00:00";
-            document.getElementById('timerBtn').innerText = "Start Rehearsal";
+            if(confirm("Reset session timer?")) {
+                clearInterval(interval);
+                timerRunning = false;
+                timeElapsed = 0;
+                localStorage.setItem('studioTime', 0);
+                updateDisplay();
+                document.getElementById('startBtn').innerText = "Start Session";
+            }
         }
 
-        function updateSummary() {
-            const cues = JSON.parse(localStorage.getItem('liveCues')) || [];
-            const done = cues.filter(c => c.done).length;
-            document.getElementById('summaryText').innerText = 
-                `Current session: ${done}/${cues.length} cues completed. Check your notes for specific adjustments.`;
-        }
+        function calculateSummary() {
+            // Pull data from other pages via LocalStorage
+            const cues = JSON.parse(localStorage.getItem('studioCues')) || [];
+            const props = JSON.parse(localStorage.getItem('studioMapData')) || {};
+            
+            const doneCues = cues.filter(c => c.status === 'done').length;
+            const propCount = Object.keys(props).length;
 
-        window.onload = updateSummary;
+            document.getElementById('cue-stat').innerText = `${doneCues} / ${cues.length}`;
+            document.getElementById('prop-stat').innerText = `${propCount} Elements`;
+        }
     </script>
 </body>
 </html>

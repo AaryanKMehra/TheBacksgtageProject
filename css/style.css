@@ -1,78 +1,219 @@
-/* Core Minimalist Theme */
+/* Stage Lead Studio: Global Stylesheet 
+    Aesthetic: High-Contrast Studio Paper (Brutalist Industrial)
+*/
+
 :root {
-    --bg: #000000;
-    --surface: #111111;
-    --border: #333333;
-    --text-main: #FFFFFF;
-    --text-dim: #888888;
-    --accent: #FFFFFF;
+    --bg-paper: #f9f7f2;      /* Eggshell Off-white */
+    --surface-white: #ffffff;
+    --border-ink: #1a1a1a;    /* Deep Ink Black */
+    --text-ink: #1a1a1a;
+    --text-dim: #666666;
+    --accent-navy: #001f3f;   /* Director's Blue */
+    --movement-red: #d40000;  /* Movement Path Red */
+    --font-main: 'Inter', -apple-system, sans-serif;
+    --shadow-brutal: 4px 4px 0px #1a1a1a;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-    background-color: var(--bg);
-    color: var(--text-main);
-    font-family: 'Inter', -apple-system, sans-serif;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
+    background-color: var(--bg-paper);
+    color: var(--text-ink);
+    font-family: var(--font-main);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
     min-height: 100vh;
 }
 
-/* Navigation */
+/* Navigation: Studio Minimalist */
 nav {
+    position: sticky;
+    top: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 3rem;
-    border-bottom: 1px solid var(--border);
+    padding: 1rem 4rem;
+    background: rgba(249, 247, 242, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid var(--border-ink);
+    z-index: 1000;
 }
 
-.logo { font-weight: 800; letter-spacing: 2px; }
+.logo {
+    font-weight: 900;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent-navy);
+}
 
-nav ul { display: flex; list-style: none; gap: 2rem; margin: 0; padding: 0; }
+nav ul {
+    display: flex;
+    list-style: none;
+    gap: 2.5rem;
+}
 
 nav a {
     color: var(--text-dim);
     text-decoration: none;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
+    font-weight: 700;
     text-transform: uppercase;
-    transition: 0.3s;
+    letter-spacing: 1px;
+    transition: 0.2s ease;
 }
 
-nav a.active, nav a:hover { color: var(--text-main); }
+nav a:hover, nav a.active {
+    color: var(--text-ink);
+    border-bottom: 2px solid var(--border-ink);
+}
 
 /* Layout Containers */
-main { padding: 3rem; max-width: 1100px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+main {
+    padding: 3rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
 
-h1 { font-size: 1.5rem; font-weight: 300; margin-bottom: 2rem; color: var(--text-main); }
+.section-header {
+    margin-bottom: 2.5rem;
+    border-bottom: 4px solid var(--border-ink);
+    padding-bottom: 1rem;
+}
 
-/* UI Elements */
-.card {
-    background: var(--surface);
-    border: 1px solid var(--border);
+h1 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    letter-spacing: -1px;
+    text-transform: uppercase;
+}
+
+.studio-card {
+    background: var(--surface-white);
+    border: 2px solid var(--border-ink);
     padding: 2rem;
     margin-bottom: 2rem;
+    box-shadow: var(--shadow-brutal);
 }
 
+/* UI Elements */
 button {
-    background: var(--text-main);
-    color: var(--bg);
-    border: none;
+    background: var(--border-ink);
+    color: var(--bg-paper);
+    border: 2px solid var(--border-ink);
     padding: 0.8rem 1.5rem;
-    font-weight: 600;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: 0.2s ease;
 }
 
-button:hover { opacity: 0.8; }
+button:hover {
+    background: var(--bg-paper);
+    color: var(--border-ink);
+}
 
-input[type="file"] { color: var(--text-dim); }
+button.secondary {
+    background: transparent;
+    color: var(--border-ink);
+}
 
-textarea {
-    width: 100%;
-    background: var(--bg);
-    color: var(--text-main);
-    border: 1px solid var(--border);
-    padding: 1rem;
-    font-family: monospace;
+input, select, textarea {
+    background: var(--surface-white);
+    border: 2px solid var(--border-ink);
+    color: var(--text-ink);
+    padding: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Dynamic Stage Grid Blueprint */
+#stage-grid-container {
+    overflow-x: auto;
+    padding: 10px;
+    background: #e5e5e5; /* Contrast background for the grid */
+    border: 2px solid var(--border-ink);
+    box-shadow: var(--shadow-brutal);
+}
+
+#stage-grid {
+    display: grid;
+    gap: 2px;
+    background: var(--border-ink);
+    padding: 2px;
+    margin: 0 auto;
+}
+
+.cell {
+    aspect-ratio: 1;
+    background: var(--surface-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 800;
+    cursor: pointer;
+    text-align: center;
+    padding: 4px;
+    position: relative;
+}
+
+.cell:hover {
+    background: #fdfaf0;
+}
+
+/* Prop Types Styling */
+.cell.prop { 
+    background: #e8e8e8;
+    color: var(--text-dim);
+}
+
+.cell.person { 
+    background: var(--accent-navy); 
+    color: #ffffff; 
+}
+
+/* Movement Logic with Arrow Styling */
+.cell.moving { 
+    color: var(--movement-red);
+    font-weight: 900;
+}
+
+.cell.moving::after {
+    content: '→';
+    font-size: 1.2rem;
+    position: absolute;
+    bottom: 2px;
+}
+
+/* Script Display Typography */
+#script-content {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text-ink);
+}
+
+/* Cue Sheet Highlights */
+.cue-item.active-cue {
+    background: #fffbe6;
+    border: 2px solid var(--border-ink);
+}
+
+.cue-item.done {
+    opacity: 0.3;
+    filter: grayscale(1);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    nav { padding: 1rem 2rem; }
+    nav ul { gap: 1rem; }
+    h1 { font-size: 1.6rem; }
+    .analytics-grid { grid-template-columns: 1fr; }
 }

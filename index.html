@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Stage Lead | Script Vault</title>
+    <title>Vault | Stage Lead Studio</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -10,75 +10,112 @@
         <div class="logo">STAGE LEAD</div>
         <ul>
             <li><a href="index.html" class="active">Vault</a></li>
-            <li><a href="props.html">Stage Map</a></li>
+            <li><a href="props.html">Map</a></li>
             <li><a href="cues.html">Cues</a></li>
             <li><a href="analytics.html">Analytics</a></li>
         </ul>
     </nav>
 
     <main>
-        <h1>Script Vault</h1>
-        <div class="card">
-            <h3>Upload Production Script (.txt)</h3>
-            <input type="file" id="scriptUpload" accept=".txt">
+        <div class="section-header">
+            <h1>Script Vault</h1>
         </div>
 
-        <div class="card" id="filter-controls" style="display:none;">
-            <label>Filter by Character: </label>
-            <select id="charFilter" onchange="filterScript()">
-                <option value="ALL">Show All</option>
-            </select>
-        </div>
-
-        <div id="script-display" class="card" style="white-space: pre-wrap; display:none;">
+        <div class="studio-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="font-size: 0.8rem; letter-spacing: 1px; color: var(--accent-grey); margin-bottom: 10px;">IMPORT PRODUCTION SCRIPT</h3>
+                    <input type="file" id="scriptUpload" accept=".txt">
+                </div>
+                <div id="status-tag" style="font-size: 0.6rem; padding: 4px 8px; border: 1px solid var(--border-subtle); color: var(--accent-grey);">NO FILE LOADED</div>
             </div>
+        </div>
+
+        <div class="studio-card" id="filter-wrap" style="display:none; border-color: var(--accent-white);">
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <label style="font-size: 0.7rem; font-weight: 800;">CHARACTER FOCUS:</label>
+                <select id="charSelect" onchange="applyFocus()"></select>
+                <button class="secondary" onclick="resetVault()" style="margin-left: auto;">Clear Vault</button>
+            </div>
+        </div>
+
+        <div id="script-container" class="studio-card" style="display:none; padding: 3rem; overflow-y: auto; max-height: 60vh;">
+            <div id="script-content" style="white-space: pre-wrap; font-family: 'Courier New', Courier, monospace; font-size: 0.95rem; line-height: 1.8;">
+                </div>
+        </div>
     </main>
 
     <script>
-        const upload = document.getElementById('scriptUpload');
-        const display = document.getElementById('script-display');
-        const filterControls = document.getElementById('filter-controls');
-        const charSelect = document.getElementById('charFilter');
+        const fileInput = document.getElementById('scriptUpload');
+        const contentArea = document.getElementById('script-content');
+        const container = document.getElementById('script-container');
+        const filterWrap = document.getElementById('filter-wrap');
+        const selector = document.getElementById('charSelect');
+        const statusTag = document.getElementById('status-tag');
 
-        upload.addEventListener('change', (e) => {
+        // Check for existing script on load
+        window.onload = () => {
+            const saved = localStorage.getItem('studioScript');
+            if (saved) loadScriptToUI(saved);
+        };
+
+        fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            const reader = new FileReader();
+            if (!file) return;
 
+            const reader = new FileReader();
             reader.onload = (event) => {
                 const text = event.target.result;
-                localStorage.setItem('rawScript', text);
-                processScript(text);
+                localStorage.setItem('studioScript', text);
+                loadScriptToUI(text);
             };
             reader.readAsText(file);
         });
 
-        function processScript(text) {
-            display.style.display = 'block';
-            display.innerText = text;
-            filterControls.style.display = 'block';
+        function loadScriptToUI(text) {
+            container.style.display = 'block';
+            filterWrap.style.display = 'block';
+            contentArea.innerText = text;
+            statusTag.innerText = "FILE ACTIVE";
+            statusTag.style.borderColor = "var(--accent-white)";
+            statusTag.style.color = "var(--accent-white)";
 
-            // Find all capitalized names (Common screenplay format)
-            const names = [...new Set(text.match(/^[A-Z]{2,}(?=:)/gm))];
-            charSelect.innerHTML = '<option value="ALL">Show All</option>';
-            names.forEach(name => {
+            // Detect characters (Words ending with colon at start of line)
+            const matches = text.match(/^[A-Z\s]{2,}(?=:)/gm);
+            const characters = [...new Set(matches)];
+            
+            selector.innerHTML = '<option value="ALL">FULL ENSEMBLE</option>';
+            characters.forEach(char => {
                 const opt = document.createElement('option');
-                opt.value = name;
-                opt.innerText = name;
-                charSelect.appendChild(opt);
+                opt.value = char;
+                opt.innerText = char;
+                selector.appendChild(opt);
             });
         }
 
-        function filterScript() {
-            const char = charSelect.value;
-            const text = localStorage.getItem('rawScript');
-            if (char === 'ALL') {
-                display.innerText = text;
-            } else {
-                // Simplified filter: highlights lines starting with the name
-                const lines = text.split('\n');
-                display.innerHTML = lines.map(line => 
-                    line.startsWith(char) ? `<strong>${line}</strong>` : `<span style="opacity:0.3">${line}</span>`
-                ).join('\n');
+        function applyFocus() {
+            const focusChar = selector.value;
+            const originalText = localStorage.getItem('studioScript');
+            
+            if (focusChar === 'ALL') {
+                contentArea.innerText = originalText;
+                return;
+            }
+
+            const lines = originalText.split('\n');
+            contentArea.innerHTML = lines.map(line => {
+                if (line.startsWith(focusChar)) {
+                    return `<span style="color: var(--accent-white); background: #1a1a1a; padding: 2px 0;">${line}</span>`;
+                } else {
+                    return `<span style="opacity: 0.15; transition: opacity 0.3s;">${line}</span>`;
+                }
+            }).join('\n');
+        }
+
+        function resetVault() {
+            if(confirm("Purge script from local storage?")) {
+                localStorage.removeItem('studioScript');
+                location.reload();
             }
         }
     </script>

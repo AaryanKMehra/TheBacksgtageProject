@@ -2,19 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Stage Lead | Cue Dashboard</title>
+    <title>Cues | Stage Lead Studio</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .cue-container { display: flex; flex-direction: column; gap: 1rem; }
-        .cue-row { 
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 1.5rem; border-left: 4px solid var(--border); transition: 0.3s;
+        .cue-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        .cue-row.completed { border-left-color: #222; opacity: 0.3; }
-        .cue-row.active { border-left-color: #fff; background: var(--surface); }
-        .cue-info { flex-grow: 1; margin-left: 1rem; }
-        .status-btn { background: none; border: 1px solid var(--border); color: #fff; font-size: 0.8rem; }
-        .status-btn.done { background: #fff; color: #000; }
+
+        .cue-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-left: 4px solid var(--accent-grey);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cue-item.active-cue {
+            border-left-color: var(--accent-white);
+            background: #151515;
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .cue-item.done {
+            opacity: 0.25;
+            border-left-color: #333;
+            filter: grayscale(1);
+        }
+
+        .cue-meta {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-grey);
+            margin-bottom: 5px;
+        }
+
+        .cue-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .cue-controls button {
+            padding: 0.5rem 1rem;
+            font-size: 0.6rem;
+        }
     </style>
 </head>
 <body>
@@ -22,54 +59,90 @@
         <div class="logo">STAGE LEAD</div>
         <ul>
             <li><a href="index.html">Vault</a></li>
-            <li><a href="props.html">Stage Map</a></li>
+            <li><a href="props.html">Map</a></li>
             <li><a href="cues.html" class="active">Cues</a></li>
             <li><a href="analytics.html">Analytics</a></li>
         </ul>
     </nav>
 
     <main>
-        <h1>Live Cue Sheet</h1>
-        <div class="card">
-            <div class="input-group" style="display: flex; gap: 10px; margin-bottom: 2rem;">
-                <input type="text" id="cueDesc" placeholder="e.g., Blackout / Sound Cue 1" style="flex-grow:1; background:#000; border:1px solid #333; color:#fff; padding:10px;">
-                <button onclick="addLiveCue()">Add Cue</button>
+        <div class="section-header">
+            <h1>Cue Execution</h1>
+        </div>
+
+        <div class="studio-card" style="display: flex; gap: 15px; border-color: var(--accent-white);">
+            <input type="text" id="cueInput" placeholder="Action (e.g., BLACKOUT / SOUND 04)" style="flex-grow: 1;">
+            <button onclick="addCue()">Register Cue</button>
+        </div>
+
+        <div class="cue-wrapper" id="cue-list">
             </div>
-            <div id="cue-list" class="cue-container">
-                </div>
+
+        <div style="margin-top: 3rem; display: flex; gap: 10px;">
+            <button class="secondary" onclick="resetCues()">Reset All</button>
+            <button class="secondary" onclick="clearCompleted()">Clear Done</button>
         </div>
     </main>
 
     <script>
+        let cueSheet = JSON.parse(localStorage.getItem('studioCues')) || [];
+
         function renderCues() {
             const list = document.getElementById('cue-list');
-            const cues = JSON.parse(localStorage.getItem('liveCues')) || [];
-            list.innerHTML = cues.map((cue, idx) => `
-                <div class="cue-row ${cue.done ? 'completed' : 'active'}">
-                    <div class="cue-info">
-                        <strong>CUE ${idx + 1}</strong>: ${cue.text}
+            list.innerHTML = '';
+
+            cueSheet.forEach((cue, index) => {
+                const item = document.createElement('div');
+                item.className = `cue-item ${cue.status === 'done' ? 'done' : ''} ${cue.status === 'active' ? 'active-cue' : ''}`;
+                
+                item.innerHTML = `
+                    <div>
+                        <div class="cue-meta">Index ${index + 1}</div>
+                        <div class="cue-text">${cue.text}</div>
                     </div>
-                    <button class="status-btn ${cue.done ? 'done' : ''}" onclick="toggleCue(${idx})">
-                        ${cue.done ? 'COMPLETED' : 'MARK DONE'}
-                    </button>
-                </div>
-            `).join('');
+                    <div class="cue-controls">
+                        <button onclick="toggleCue(${index})">${cue.status === 'done' ? 'UNDO' : 'COMPLETE'}</button>
+                    </div>
+                `;
+                
+                list.appendChild(item);
+            });
         }
 
-        function addLiveCue() {
-            const input = document.getElementById('cueDesc');
+        function addCue() {
+            const input = document.getElementById('cueInput');
             if (!input.value) return;
-            const cues = JSON.parse(localStorage.getItem('liveCues')) || [];
-            cues.push({ text: input.value, done: false });
-            localStorage.setItem('liveCues', JSON.stringify(cues));
+
+            cueSheet.push({ text: input.value, status: 'pending' });
+            localStorage.setItem('studioCues', JSON.stringify(cueSheet));
             input.value = '';
             renderCues();
         }
 
-        function toggleCue(idx) {
-            const cues = JSON.parse(localStorage.getItem('liveCues'));
-            cues[idx].done = !cues[idx].done;
-            localStorage.setItem('liveCues', JSON.stringify(cues));
+        function toggleCue(index) {
+            // Logic to move the "Active" focus to the next cue automatically
+            if (cueSheet[index].status !== 'done') {
+                cueSheet[index].status = 'done';
+                if (cueSheet[index + 1]) cueSheet[index + 1].status = 'active';
+            } else {
+                cueSheet[index].status = 'pending';
+            }
+            
+            localStorage.setItem('studioCues', JSON.stringify(cueSheet));
+            renderCues();
+        }
+
+        function resetCues() {
+            if(confirm("Purge cue sheet?")) {
+                cueSheet = [];
+                localStorage.removeItem('studioCues');
+                renderCues();
+            }
+        }
+
+        function clearCompleted() {
+            cueSheet = cueSheet.filter(c => c.status !== 'done');
+            localStorage.setItem('studioCues', JSON.stringify(cueSheet));
             renderCues();
         }
 
