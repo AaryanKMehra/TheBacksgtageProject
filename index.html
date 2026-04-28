@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <title>Vault | Stage Lead Studio</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Specific highlight style for the focused character */
+        .highlight {
+            background-color: var(--accent-navy);
+            color: #ffffff !important;
+            padding: 2px 4px;
+            font-weight: bold;
+            display: inline-block;
+            width: 100%;
+        }
+        .dimmed {
+            opacity: 0.2;
+            transition: opacity 0.3s ease;
+        }
+    </style>
 </head>
 <body>
     <nav>
@@ -22,25 +37,20 @@
         </div>
 
         <div class="studio-card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h3 style="font-size: 0.8rem; letter-spacing: 1px; color: var(--accent-grey); margin-bottom: 10px;">IMPORT PRODUCTION SCRIPT</h3>
-                    <input type="file" id="scriptUpload" accept=".txt">
-                </div>
-                <div id="status-tag" style="font-size: 0.6rem; padding: 4px 8px; border: 1px solid var(--border-subtle); color: var(--accent-grey);">NO FILE LOADED</div>
-            </div>
+            <h3 style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 15px;">UPLOAD PRODUCTION SCRIPT (.TXT)</h3>
+            <input type="file" id="scriptUpload" accept=".txt">
         </div>
 
-        <div class="studio-card" id="filter-wrap" style="display:none; border-color: var(--accent-white);">
+        <div class="studio-card" id="filter-wrap" style="display:none; border-color: var(--accent-navy);">
             <div style="display: flex; gap: 20px; align-items: center;">
-                <label style="font-size: 0.7rem; font-weight: 800;">CHARACTER FOCUS:</label>
+                <label style="font-size: 0.7rem; font-weight: 900;">FOCUS CHARACTER:</label>
                 <select id="charSelect" onchange="applyFocus()"></select>
                 <button class="secondary" onclick="resetVault()" style="margin-left: auto;">Clear Vault</button>
             </div>
         </div>
 
-        <div id="script-container" class="studio-card" style="display:none; padding: 3rem; overflow-y: auto; max-height: 60vh;">
-            <div id="script-content" style="white-space: pre-wrap; font-family: 'Courier New', Courier, monospace; font-size: 0.95rem; line-height: 1.8;">
+        <div id="script-container" class="studio-card" style="display:none; padding: 2.5rem; overflow-y: auto; max-height: 65vh;">
+            <div id="script-content">
                 </div>
         </div>
     </main>
@@ -51,9 +61,7 @@
         const container = document.getElementById('script-container');
         const filterWrap = document.getElementById('filter-wrap');
         const selector = document.getElementById('charSelect');
-        const statusTag = document.getElementById('status-tag');
 
-        // Check for existing script on load
         window.onload = () => {
             const saved = localStorage.getItem('studioScript');
             if (saved) loadScriptToUI(saved);
@@ -76,20 +84,19 @@
             container.style.display = 'block';
             filterWrap.style.display = 'block';
             contentArea.innerText = text;
-            statusTag.innerText = "FILE ACTIVE";
-            statusTag.style.borderColor = "var(--accent-white)";
-            statusTag.style.color = "var(--accent-white)";
 
-            // Detect characters (Words ending with colon at start of line)
-            const matches = text.match(/^[A-Z\s]{2,}(?=:)/gm);
-            const characters = [...new Set(matches)];
+            // Updated Regex: Finds names at start of line followed by : or newline
+            const matches = text.match(/^[A-Z\s]{2,}(?=:|\n)/gm);
+            const characters = [...new Set(matches)].map(name => name.trim());
             
             selector.innerHTML = '<option value="ALL">FULL ENSEMBLE</option>';
             characters.forEach(char => {
-                const opt = document.createElement('option');
-                opt.value = char;
-                opt.innerText = char;
-                selector.appendChild(opt);
+                if(char.length > 0) {
+                    const opt = document.createElement('option');
+                    opt.value = char;
+                    opt.innerText = char;
+                    selector.appendChild(opt);
+                }
             });
         }
 
@@ -98,22 +105,23 @@
             const originalText = localStorage.getItem('studioScript');
             
             if (focusChar === 'ALL') {
-                contentArea.innerText = originalText;
+                contentArea.innerHTML = originalText;
                 return;
             }
 
             const lines = originalText.split('\n');
             contentArea.innerHTML = lines.map(line => {
-                if (line.startsWith(focusChar)) {
-                    return `<span style="color: var(--accent-white); background: #1a1a1a; padding: 2px 0;">${line}</span>`;
+                // Check if the line starts with the character name followed by a colon
+                if (line.trim().startsWith(focusChar)) {
+                    return `<div class="highlight">${line}</div>`;
                 } else {
-                    return `<span style="opacity: 0.15; transition: opacity 0.3s;">${line}</span>`;
+                    return `<div class="dimmed">${line}</div>`;
                 }
-            }).join('\n');
+            }).join('');
         }
 
         function resetVault() {
-            if(confirm("Purge script from local storage?")) {
+            if(confirm("Clear current script from local storage?")) {
                 localStorage.removeItem('studioScript');
                 location.reload();
             }
