@@ -5,18 +5,24 @@
     <title>Vault | Stage Lead Studio</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Specific highlight style for the focused character */
+        /* Ensures highlighted lines pop and take up full width */
         .highlight {
             background-color: var(--accent-navy);
             color: #ffffff !important;
-            padding: 2px 4px;
+            padding: 4px 8px;
             font-weight: bold;
-            display: inline-block;
-            width: 100%;
+            display: block; /* Forces line break even if original text doesn't have one */
+            min-height: 1.2em;
         }
         .dimmed {
-            opacity: 0.2;
+            opacity: 0.15;
             transition: opacity 0.3s ease;
+            display: block;
+            min-height: 1.2em;
+        }
+        #script-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -50,8 +56,7 @@
         </div>
 
         <div id="script-container" class="studio-card" style="display:none; padding: 2.5rem; overflow-y: auto; max-height: 65vh;">
-            <div id="script-content">
-                </div>
+            <div id="script-content"></div>
         </div>
     </main>
 
@@ -85,18 +90,16 @@
             filterWrap.style.display = 'block';
             contentArea.innerText = text;
 
-            // Updated Regex: Finds names at start of line followed by : or newline
-            const matches = text.match(/^[A-Z\s]{2,}(?=:|\n)/gm);
-            const characters = [...new Set(matches)].map(name => name.trim());
+            // Updated Regex to find all-caps names followed by a colon or space
+            const matches = text.match(/^[A-Z\s]{2,}(?=:|\s)/gm);
+            const characters = [...new Set(matches)].map(name => name.trim()).filter(n => n.length > 1);
             
             selector.innerHTML = '<option value="ALL">FULL ENSEMBLE</option>';
             characters.forEach(char => {
-                if(char.length > 0) {
-                    const opt = document.createElement('option');
-                    opt.value = char;
-                    opt.innerText = char;
-                    selector.appendChild(opt);
-                }
+                const opt = document.createElement('option');
+                opt.value = char;
+                opt.innerText = char;
+                selector.appendChild(opt);
             });
         }
 
@@ -105,23 +108,26 @@
             const originalText = localStorage.getItem('studioScript');
             
             if (focusChar === 'ALL') {
-                contentArea.innerHTML = originalText;
+                contentArea.innerHTML = originalText.split('\n').map(l => `<div>${l || '&nbsp;'}</div>`).join('');
                 return;
             }
 
+            // Split by newline and map each line individually
             const lines = originalText.split('\n');
             contentArea.innerHTML = lines.map(line => {
-                // Check if the line starts with the character name followed by a colon
-                if (line.trim().startsWith(focusChar)) {
+                const trimmedLine = line.trim();
+                // Check if the line starts with the character name
+                if (trimmedLine.startsWith(focusChar)) {
                     return `<div class="highlight">${line}</div>`;
                 } else {
-                    return `<div class="dimmed">${line}</div>`;
+                    // Use &nbsp; to preserve empty lines for spacing
+                    return `<div class="dimmed">${line || '&nbsp;'}</div>`;
                 }
             }).join('');
         }
 
         function resetVault() {
-            if(confirm("Clear current script from local storage?")) {
+            if(confirm("Clear script?")) {
                 localStorage.removeItem('studioScript');
                 location.reload();
             }
