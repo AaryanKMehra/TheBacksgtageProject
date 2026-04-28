@@ -4,10 +4,38 @@
     <meta charset="UTF-8">
     <title>Map | Stage Lead Studio</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Directional arrow rotations */
+        .cell.up::after { content: '↑'; bottom: 5px; }
+        .cell.right::after { content: '→'; right: 5px; }
+        .cell.down::after { content: '↓'; top: 5px; }
+        .cell.left::after { content: '←'; left: 5px; }
+        
+        .cell.moving::after {
+            position: absolute;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--movement-red);
+        }
+
+        /* New Action Tool Styling: Hatched Pattern */
+        .cell.action {
+            background: repeating-linear-gradient(
+                45deg,
+                #fff,
+                #fff 5px,
+                #f2f2f2 5px,
+                #f2f2f2 10px
+            );
+            border: 2px solid var(--accent-navy);
+            color: var(--accent-navy);
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
     <nav>
-        <div class="logo">TheBackstageProject</div>
+        <div class="logo">STAGE LEAD</div>
         <ul>
             <li><a href="index.html">Vault</a></li>
             <li><a href="props.html" class="active">Map</a></li>
@@ -23,24 +51,35 @@
 
         <div class="studio-card" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
             <div class="input-group">
-                <label style="display:block; font-size:0.6rem; margin-bottom:5px; color:var(--accent-grey);">STAGE WIDTH (COLS)</label>
-                <input type="number" id="gridW" value="8" min="2" max="20" style="width:80px;">
+                <label style="display:block; font-size:0.6rem; margin-bottom:5px; color:var(--text-dim);">STAGE WIDTH (COLS)</label>
+                <input type="number" id="gridW" value="8" min="2" max="15">
             </div>
             <div class="input-group">
-                <label style="display:block; font-size:0.6rem; margin-bottom:5px; color:var(--accent-grey);">STAGE DEPTH (ROWS)</label>
-                <input type="number" id="gridH" value="6" min="2" max="20" style="width:80px;">
+                <label style="display:block; font-size:0.6rem; margin-bottom:5px; color:var(--text-dim);">STAGE DEPTH (ROWS)</label>
+                <input type="number" id="gridH" value="6" min="2" max="15">
             </div>
             <button onclick="buildStage()">Update Dimensions</button>
         </div>
 
-        <div class="studio-card" style="display: flex; gap: 15px; align-items: center; border-color: var(--accent-white);">
-            <select id="tool">
+        <div class="studio-card" style="display: flex; gap: 15px; align-items: center; border-color: var(--accent-navy);">
+            <select id="tool" onchange="toggleDirSelector()">
                 <option value="prop">Furniture/Prop</option>
                 <option value="person">Cast Member</option>
                 <option value="moving">Movement Path</option>
+                <option value="action">Action Beat</option>
             </select>
-            <input type="text" id="label" placeholder="Identifier (e.g., Chair A / Aman)">
-            <p style="font-size:0.7rem; color:var(--accent-grey);">Mode: Click to Place / Click to Remove</p>
+            
+            <div id="dir-wrap" style="display:none; gap: 10px; align-items: center;">
+                <label style="font-size: 0.6rem; font-weight: 800;">DIRECTION:</label>
+                <select id="direction">
+                    <option value="up">UP (↑)</option>
+                    <option value="right" selected>RIGHT (→)</option>
+                    <option value="down">DOWN (↓)</option>
+                    <option value="left">LEFT (←)</option>
+                </select>
+            </div>
+
+            <input type="text" id="label" placeholder="Label (e.g. Aman / Phone Rings)" style="flex-grow:1;">
         </div>
 
         <div id="stage-grid-container">
@@ -56,33 +95,41 @@
         const gridElement = document.getElementById('stage-grid');
         let stageData = JSON.parse(localStorage.getItem('studioMapData')) || {};
 
+        function toggleDirSelector() {
+            const tool = document.getElementById('tool').value;
+            document.getElementById('dir-wrap').style.display = (tool === 'moving') ? 'flex' : 'none';
+        }
+
         function buildStage() {
             const w = document.getElementById('gridW').value;
             const h = document.getElementById('gridH').value;
             
             gridElement.style.gridTemplateColumns = `repeat(${w}, 1fr)`;
-            gridElement.style.width = `${w * 60}px`; // Responsive but controlled sizing
-            
+            gridElement.style.width = `${w * 70}px`; 
             gridElement.innerHTML = '';
-            const totalCells = w * h;
 
-            for (let i = 0; i < totalCells; i++) {
+            for (let i = 0; i < (w * h); i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 
-                // Persistence Check
                 if (stageData[i]) {
-                    applyCellState(cell, stageData[i].type, stageData[i].label);
+                    applyCellState(cell, stageData[i]);
                 }
 
                 cell.onclick = () => {
                     if (cell.dataset.active === "true") {
-                        removeCellState(cell, i);
+                        cell.className = 'cell';
+                        cell.innerText = '';
+                        cell.dataset.active = "false";
+                        delete stageData[i];
                     } else {
                         const type = document.getElementById('tool').value;
+                        const dir = document.getElementById('direction').value;
                         const label = document.getElementById('label').value || "";
-                        applyCellState(cell, type, label);
-                        stageData[i] = { type, label };
+                        
+                        const state = { type, label, dir: type === 'moving' ? dir : '' };
+                        applyCellState(cell, state);
+                        stageData[i] = state;
                     }
                     localStorage.setItem('studioMapData', JSON.stringify(stageData));
                 };
@@ -90,28 +137,20 @@
             }
         }
 
-        function applyCellState(cell, type, label) {
-            cell.className = `cell ${type}`;
-            cell.innerText = label;
+        function applyCellState(cell, state) {
+            cell.className = `cell ${state.type} ${state.dir}`;
+            cell.innerText = state.label;
             cell.dataset.active = "true";
         }
 
-        function removeCellState(cell, index) {
-            cell.className = 'cell';
-            cell.innerText = '';
-            cell.dataset.active = "false";
-            delete stageData[index];
-        }
-
         function clearStage() {
-            if(confirm("Clear current stage blueprint?")) {
+            if(confirm("Wipe all data from the stage blueprint?")) {
                 stageData = {};
                 localStorage.removeItem('studioMapData');
                 buildStage();
             }
         }
 
-        // Initial Build
         window.onload = buildStage;
     </script>
 </body>
