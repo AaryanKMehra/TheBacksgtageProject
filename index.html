@@ -29,6 +29,7 @@
             <li><a href="props.html">Map</a></li>
             <li><a href="cues.html">Cues</a></li>
             <li><a href="analytics.html" id="nav-analytics">Analytics</a></li>
+            <li><a href="#" onclick="logout()" style="color: var(--movement-red); margin-left: 20px;">EXIT</a></li>
         </ul>
     </nav>
 
@@ -37,33 +38,36 @@
             <h1 id="page-title">Script Vault</h1>
         </div>
 
+        <div id="share-box" class="studio-card director-only" style="display:none; background: #fffbe6; border-color: var(--accent-navy);">
+            <p style="font-size: 0.7rem; font-weight: 800; margin-bottom: 5px;">SHARE CREW ACCESS:</p>
+            <code id="share-url" style="font-size: 0.8rem; word-break: break-all; color: var(--accent-navy);"></code>
+        </div>
+
         <div class="studio-card" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
             <div class="director-only" style="display: flex; gap: 10px; align-items: center; flex-grow: 1;">
-                <input type="text" id="scriptNameInput" placeholder="Name this script (e.g., Act 1)" style="flex-grow: 1;">
-                <button onclick="saveScript()">Save Script</button>
+                <input type="text" id="scriptNameInput" placeholder="Name script" style="flex-grow: 1;">
+                <button onclick="saveScript()">Save</button>
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
-                <label style="font-weight: bold; font-size: 0.8rem;">LOAD SAVED:</label>
-                <select id="savedScriptsDropdown" onchange="loadSavedScript()">
-                    <option value="">-- Select --</option>
-                </select>
+                <label style="font-weight: bold; font-size: 0.8rem;">LOAD:</label>
+                <select id="savedScriptsDropdown" onchange="loadSavedScript()"></select>
             </div>
         </div>
 
         <div class="studio-card director-only">
-            <h3 style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 15px;">IMPORT PRODUCTION SCRIPT (.TXT)</h3>
+            <h3 style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 15px;">IMPORT (.TXT)</h3>
             <input type="file" id="scriptUpload" accept=".txt">
         </div>
 
-        <div class="studio-card" id="filter-wrap" style="display:none; border-color: var(--accent-navy);">
+        <div class="studio-card" id="filter-wrap" style="display:none;">
             <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-                <label style="font-size: 0.7rem; font-weight: 900;">FOCUS CHARACTER:</label>
+                <label style="font-size: 0.7rem; font-weight: 900;">FOCUS:</label>
                 <select id="charSelect" onchange="applyFocus()"></select>
-                <button class="secondary director-only" onclick="clearDisplay()" style="margin-left: auto;">Clear Display</button>
+                <button class="secondary director-only" onclick="clearDisplay()" style="margin-left: auto;">Clear</button>
             </div>
         </div>
 
-        <div id="script-container" class="studio-card" style="display:none; padding: 2.5rem; overflow-y: auto; max-height: 60vh;">
+        <div id="script-container" class="studio-card" style="display:none; padding: 2.5rem; overflow-y: auto; max-height: 50vh;">
             <div id="script-content"></div>
         </div>
     </main>
@@ -71,15 +75,29 @@
     <script>
         let currentRawScript = "";
 
-        // --- Core Project Logic ---
+        // --- Role & URL Logic ---
         function setRole(role) {
             const title = document.getElementById('projectTitleInput').value.trim();
             localStorage.setItem('productionName', title || "Stage Lead");
             localStorage.setItem('userRole', role);
-            location.reload(); // Refresh to apply role classes and branding
+            location.href = window.location.pathname; // Strips parameters and reloads
+        }
+
+        function logout() {
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('productionName');
+            location.reload();
         }
 
         window.onload = () => {
+            // 1. Check for URL Parameters first
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('role') === 'crew') {
+                localStorage.setItem('userRole', 'crew');
+                if (!localStorage.getItem('productionName')) localStorage.setItem('productionName', 'Remote Crew');
+            }
+
+            // 2. Initial UI State
             const role = localStorage.getItem('userRole');
             const prodName = localStorage.getItem('productionName') || "Stage Lead";
 
@@ -90,18 +108,22 @@
                 if (role === 'crew') {
                     document.body.classList.add('crew-view');
                     document.getElementById('nav-analytics').style.display = 'none';
-                    document.getElementById('page-title').innerText = "Script Vault (Crew View)";
+                } else if (role === 'director') {
+                    // Show Share Link for Director
+                    const shareBox = document.getElementById('share-box');
+                    const shareUrl = document.getElementById('share-url');
+                    shareBox.style.display = 'block';
+                    shareUrl.innerText = window.location.origin + window.location.pathname + "?role=crew";
                 }
                 refreshScriptDropdown();
             }
         };
 
-        // --- File Upload ---
+        // --- Standard Script Functions ---
         const fileInput = document.getElementById('scriptUpload');
         if(fileInput) {
             fileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
-                if (!file) return;
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     currentRawScript = event.target.result;
@@ -111,85 +133,63 @@
             });
         }
 
-        // --- Dictionary Save/Load Logic ---
         function saveScript() {
             const name = document.getElementById('scriptNameInput').value.trim();
-            if (!name) return alert("Please enter a name for the script.");
-            if (!currentRawScript) return alert("Please upload a script first.");
-
-            let savedScripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
-            savedScripts[name] = currentRawScript;
-            localStorage.setItem('stageLead_savedScripts', JSON.stringify(savedScripts));
-            
-            alert(`Script "${name}" saved to library.`);
+            if (!name || !currentRawScript) return alert("Upload script and enter name.");
+            let scripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
+            scripts[name] = currentRawScript;
+            localStorage.setItem('stageLead_savedScripts', JSON.stringify(scripts));
             refreshScriptDropdown();
         }
 
         function refreshScriptDropdown() {
             const dropdown = document.getElementById('savedScriptsDropdown');
-            let savedScripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
+            let scripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
             dropdown.innerHTML = '<option value="">-- Select --</option>';
-            for (const scriptName in savedScripts) {
-                const option = document.createElement('option');
-                option.value = scriptName;
-                option.textContent = scriptName;
-                dropdown.appendChild(option);
-            }
+            Object.keys(scripts).forEach(n => {
+                const opt = document.createElement('option');
+                opt.value = n; opt.innerText = n;
+                dropdown.appendChild(opt);
+            });
         }
 
         function loadSavedScript() {
-            const selectedName = document.getElementById('savedScriptsDropdown').value;
-            if (!selectedName) return;
-            let savedScripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
-            if (savedScripts[selectedName]) {
-                currentRawScript = savedScripts[selectedName];
-                document.getElementById('scriptNameInput').value = selectedName;
+            const name = document.getElementById('savedScriptsDropdown').value;
+            let scripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
+            if (scripts[name]) {
+                currentRawScript = scripts[name];
                 loadScriptToUI(currentRawScript);
             }
         }
 
-        // --- Rendering & Highlighting ---
         function loadScriptToUI(text) {
             document.getElementById('script-container').style.display = 'block';
             document.getElementById('filter-wrap').style.display = 'block';
-            
             const matches = text.match(/^[A-Z\s]{2,}(?=:|\s)/gm) || [];
-            const characters = [...new Set(matches)].map(name => name.trim()).filter(n => n.length > 1);
-            
+            const characters = [...new Set(matches)].map(n => n.trim()).filter(n => n.length > 1);
             const selector = document.getElementById('charSelect');
             selector.innerHTML = '<option value="ALL">FULL ENSEMBLE</option>';
             characters.forEach(char => {
                 const opt = document.createElement('option');
-                opt.value = char;
-                opt.innerText = char;
+                opt.value = char; opt.innerText = char;
                 selector.appendChild(opt);
             });
-
             applyFocus();
         }
 
         function applyFocus() {
-            const focusChar = document.getElementById('charSelect').value;
-            const contentArea = document.getElementById('script-content');
+            const focus = document.getElementById('charSelect').value;
+            const content = document.getElementById('script-content');
             if (!currentRawScript) return;
-
-            const lines = currentRawScript.split('\n');
-            contentArea.innerHTML = lines.map(line => {
-                const trimmed = line.trim();
-                if (focusChar !== 'ALL' && trimmed.startsWith(focusChar)) {
-                    return `<div class="highlight">${line}</div>`;
-                } else {
-                    const dimClass = (focusChar === 'ALL') ? '' : 'dimmed';
-                    return `<div class="${dimClass}">${line || '&nbsp;'}</div>`;
-                }
+            content.innerHTML = currentRawScript.split('\n').map(line => {
+                if (focus !== 'ALL' && line.trim().startsWith(focus)) return `<div class="highlight">${line}</div>`;
+                return `<div class="${focus === 'ALL' ? '' : 'dimmed'}">${line || '&nbsp;'}</div>`;
             }).join('');
         }
 
         function clearDisplay() {
             currentRawScript = "";
             document.getElementById('script-container').style.display = 'none';
-            document.getElementById('filter-wrap').style.display = 'none';
-            document.getElementById('scriptNameInput').value = "";
         }
     </script>
 </body>
