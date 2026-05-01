@@ -3,82 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <title>Cues | Stage Lead Studio</title>
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        .cue-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .cue-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1.5rem;
-            background: var(--bg-deep);
-            border: 1px solid var(--border-subtle);
-            border-left: 4px solid var(--accent-grey);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .cue-item.active-cue {
-            border-left-color: var(--accent-white);
-            background: #151515;
-            transform: scale(1.02);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .cue-item.done {
-            opacity: 0.25;
-            border-left-color: #333;
-            filter: grayscale(1);
-        }
-
-        .cue-meta {
-            font-size: 0.6rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--accent-grey);
-            margin-bottom: 5px;
-        }
-
-        .cue-text {
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .cue-controls button {
-            padding: 0.5rem 1rem;
-            font-size: 0.6rem;
-        }
-    </style>
+    <link rel="stylesheet" href="css/HomePage.css">
 </head>
 <body>
+
     <nav>
-        <div class="logo">TheBackstageProject</div>
+        <div class="logo">STAGE LEAD</div>
         <ul>
             <li><a href="index.html">Vault</a></li>
             <li><a href="props.html">Map</a></li>
             <li><a href="cues.html" class="active">Cues</a></li>
-            <li><a href="analytics.html">Analytics</a></li>
+            <li><a href="analytics.html" id="nav-analytics">Analytics</a></li>
         </ul>
     </nav>
 
     <main>
-        <div class="section-header">
-            <h1>Cue Execution</h1>
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <h1 id="page-title">Cue Execution</h1>
+            <span id="role-badge" style="font-size: 0.7rem; font-weight: bold; padding: 4px 8px; background: var(--border-ink); color: var(--bg-paper); border-radius: 4px;">DIRECTOR</span>
         </div>
 
-        <div class="studio-card" style="display: flex; gap: 15px; border-color: var(--accent-white);">
+        <div class="studio-card director-only" style="display: flex; gap: 15px; border-color: var(--border-ink);">
             <input type="text" id="cueInput" placeholder="Action (e.g., BLACKOUT / SOUND 04)" style="flex-grow: 1;">
             <button onclick="addCue()">Register Cue</button>
         </div>
 
-        <div class="cue-wrapper" id="cue-list">
+        <div class="cue-wrapper" id="cue-list" style="display: flex; flex-direction: column; gap: 12px;">
             </div>
 
-        <div style="margin-top: 3rem; display: flex; gap: 10px;">
+        <div style="margin-top: 3rem; display: flex; gap: 10px;" class="director-only">
             <button class="secondary" onclick="resetCues()">Reset All</button>
             <button class="secondary" onclick="clearCompleted()">Clear Done</button>
         </div>
@@ -87,21 +40,53 @@
     <script>
         let cueSheet = JSON.parse(localStorage.getItem('studioCues')) || [];
 
+        // --- Role & View Logic ---
+        window.onload = () => {
+            const role = localStorage.getItem('userRole');
+            if (role === 'crew') {
+                document.body.classList.add('crew-view');
+                document.getElementById('nav-analytics').style.display = 'none';
+                document.getElementById('page-title').innerText = "Live Cues (Crew View)";
+                document.getElementById('role-badge').innerText = "CREW";
+                document.getElementById('role-badge').style.background = "var(--text-dim)";
+            }
+            renderCues();
+        };
+
+        // --- Core Cue Logic ---
         function renderCues() {
             const list = document.getElementById('cue-list');
             list.innerHTML = '';
+            
+            // Check if we are in view-only mode
+            const isCrew = document.body.classList.contains('crew-view');
 
             cueSheet.forEach((cue, index) => {
                 const item = document.createElement('div');
-                item.className = `cue-item ${cue.status === 'done' ? 'done' : ''} ${cue.status === 'active' ? 'active-cue' : ''}`;
+                item.className = `studio-card cue-item ${cue.status === 'done' ? 'done' : ''} ${cue.status === 'active' ? 'active-cue' : ''}`;
+                item.style.padding = '1.5rem';
+                item.style.marginBottom = '0';
+                item.style.display = 'flex';
+                item.style.justifyContent = 'space-between';
+                item.style.alignItems = 'center';
                 
+                // If Crew, show text status. If Director, show actionable button.
+                let controlHTML = '';
+                if (!isCrew) {
+                    controlHTML = `<button onclick="toggleCue(${index})">${cue.status === 'done' ? 'UNDO' : 'COMPLETE'}</button>`;
+                } else {
+                    let statusColor = cue.status === 'active' ? 'var(--movement-red)' : 'var(--text-ink)';
+                    if (cue.status === 'done') statusColor = 'var(--text-dim)';
+                    controlHTML = `<div style="font-weight: 900; font-size: 0.8rem; color: ${statusColor};">${cue.status.toUpperCase()}</div>`;
+                }
+
                 item.innerHTML = `
                     <div>
-                        <div class="cue-meta">Index ${index + 1}</div>
-                        <div class="cue-text">${cue.text}</div>
+                        <div style="font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 5px;">Index ${index + 1}</div>
+                        <div style="font-size: 1.1rem; font-weight: 800;">${cue.text}</div>
                     </div>
                     <div class="cue-controls">
-                        <button onclick="toggleCue(${index})">${cue.status === 'done' ? 'UNDO' : 'COMPLETE'}</button>
+                        ${controlHTML}
                     </div>
                 `;
                 
@@ -113,19 +98,28 @@
             const input = document.getElementById('cueInput');
             if (!input.value) return;
 
-            cueSheet.push({ text: input.value, status: 'pending' });
+            // First cue added automatically becomes 'active', rest are 'pending'
+            const status = cueSheet.length === 0 ? 'active' : 'pending';
+            cueSheet.push({ text: input.value, status: status });
+            
             localStorage.setItem('studioCues', JSON.stringify(cueSheet));
             input.value = '';
             renderCues();
         }
 
         function toggleCue(index) {
-            // Logic to move the "Active" focus to the next cue automatically
+            if (document.body.classList.contains('crew-view')) return; // Safety lock
+
+            // Mark current as done, next as active
             if (cueSheet[index].status !== 'done') {
                 cueSheet[index].status = 'done';
                 if (cueSheet[index + 1]) cueSheet[index + 1].status = 'active';
             } else {
+                // Undo logic
                 cueSheet[index].status = 'pending';
+                if (cueSheet[index + 1] && cueSheet[index + 1].status === 'active') {
+                    cueSheet[index + 1].status = 'pending';
+                }
             }
             
             localStorage.setItem('studioCues', JSON.stringify(cueSheet));
@@ -133,7 +127,7 @@
         }
 
         function resetCues() {
-            if(confirm("Purge cue sheet?")) {
+            if(confirm("Purge entire cue sheet?")) {
                 cueSheet = [];
                 localStorage.removeItem('studioCues');
                 renderCues();
@@ -142,11 +136,15 @@
 
         function clearCompleted() {
             cueSheet = cueSheet.filter(c => c.status !== 'done');
+            
+            // Re-assign active status if the first item isn't active
+            if(cueSheet.length > 0 && cueSheet[0].status === 'pending') {
+                cueSheet[0].status = 'active';
+            }
+            
             localStorage.setItem('studioCues', JSON.stringify(cueSheet));
             renderCues();
         }
-
-        window.onload = renderCues;
     </script>
 </body>
 </html>

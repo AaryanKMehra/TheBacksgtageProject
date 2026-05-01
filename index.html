@@ -2,98 +2,161 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vault | Stage Lead Studio</title>
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        /* Ensures highlighted lines pop and take up full width */
-        .highlight {
-            background-color: var(--accent-navy);
-            color: #ffffff !important;
-            padding: 4px 8px;
-            font-weight: bold;
-            display: block; /* Forces line break even if original text doesn't have one */
-            min-height: 1.2em;
-        }
-        .dimmed {
-            opacity: 0.15;
-            transition: opacity 0.3s ease;
-            display: block;
-            min-height: 1.2em;
-        }
-        #script-content {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-    </style>
+    <link rel="stylesheet" href="css/HomePage.css">
 </head>
 <body>
+
+    <div id="entry-gate" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-paper); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <div class="studio-card" style="text-align:center; max-width:400px; width: 90%;">
+            <h2 style="margin-bottom:10px; font-weight: 900; letter-spacing: -1px;">STAGE LEAD ACCESS</h2>
+            
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label style="font-size: 0.6rem; font-weight: 800; color: var(--text-dim);">PRODUCTION NAME</label>
+                <input type="text" id="projectTitleInput" placeholder="e.g. Housefull" style="width: 100%; margin-top: 5px;">
+            </div>
+
+            <button onclick="setRole('director')" style="width:100%; margin-bottom:15px;">Director Access</button>
+            <button onclick="setRole('crew')" class="secondary" style="width:100%;">Join as Crew (View Only)</button>
+        </div>
+    </div>
+
     <nav>
-        <div class="logo">TheBackstageProject</div>
+        <div class="logo">STAGE LEAD</div>
         <ul>
             <li><a href="index.html" class="active">Vault</a></li>
             <li><a href="props.html">Map</a></li>
             <li><a href="cues.html">Cues</a></li>
-            <li><a href="analytics.html">Analytics</a></li>
+            <li><a href="analytics.html" id="nav-analytics">Analytics</a></li>
         </ul>
     </nav>
 
     <main>
         <div class="section-header">
-            <h1>Script Vault</h1>
+            <h1 id="page-title">Script Vault</h1>
         </div>
 
-        <div class="studio-card">
-            <h3 style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 15px;">UPLOAD PRODUCTION SCRIPT (.TXT)</h3>
+        <div class="studio-card" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
+            <div class="director-only" style="display: flex; gap: 10px; align-items: center; flex-grow: 1;">
+                <input type="text" id="scriptNameInput" placeholder="Name this script (e.g., Act 1)" style="flex-grow: 1;">
+                <button onclick="saveScript()">Save Script</button>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label style="font-weight: bold; font-size: 0.8rem;">LOAD SAVED:</label>
+                <select id="savedScriptsDropdown" onchange="loadSavedScript()">
+                    <option value="">-- Select --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="studio-card director-only">
+            <h3 style="font-size: 0.7rem; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 15px;">IMPORT PRODUCTION SCRIPT (.TXT)</h3>
             <input type="file" id="scriptUpload" accept=".txt">
         </div>
 
         <div class="studio-card" id="filter-wrap" style="display:none; border-color: var(--accent-navy);">
-            <div style="display: flex; gap: 20px; align-items: center;">
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
                 <label style="font-size: 0.7rem; font-weight: 900;">FOCUS CHARACTER:</label>
                 <select id="charSelect" onchange="applyFocus()"></select>
-                <button class="secondary" onclick="resetVault()" style="margin-left: auto;">Clear Vault</button>
+                <button class="secondary director-only" onclick="clearDisplay()" style="margin-left: auto;">Clear Display</button>
             </div>
         </div>
 
-        <div id="script-container" class="studio-card" style="display:none; padding: 2.5rem; overflow-y: auto; max-height: 65vh;">
+        <div id="script-container" class="studio-card" style="display:none; padding: 2.5rem; overflow-y: auto; max-height: 60vh;">
             <div id="script-content"></div>
         </div>
     </main>
 
     <script>
-        const fileInput = document.getElementById('scriptUpload');
-        const contentArea = document.getElementById('script-content');
-        const container = document.getElementById('script-container');
-        const filterWrap = document.getElementById('filter-wrap');
-        const selector = document.getElementById('charSelect');
+        let currentRawScript = "";
+
+        // --- Core Project Logic ---
+        function setRole(role) {
+            const title = document.getElementById('projectTitleInput').value.trim();
+            localStorage.setItem('productionName', title || "Stage Lead");
+            localStorage.setItem('userRole', role);
+            location.reload(); // Refresh to apply role classes and branding
+        }
 
         window.onload = () => {
-            const saved = localStorage.getItem('studioScript');
-            if (saved) loadScriptToUI(saved);
+            const role = localStorage.getItem('userRole');
+            const prodName = localStorage.getItem('productionName') || "Stage Lead";
+
+            if (role) {
+                document.getElementById('entry-gate').style.display = 'none';
+                document.querySelector('.logo').innerText = `SL | ${prodName.toUpperCase()}`;
+                
+                if (role === 'crew') {
+                    document.body.classList.add('crew-view');
+                    document.getElementById('nav-analytics').style.display = 'none';
+                    document.getElementById('page-title').innerText = "Script Vault (Crew View)";
+                }
+                refreshScriptDropdown();
+            }
         };
 
-        fileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        // --- File Upload ---
+        const fileInput = document.getElementById('scriptUpload');
+        if(fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    currentRawScript = event.target.result;
+                    loadScriptToUI(currentRawScript);
+                };
+                reader.readAsText(file);
+            });
+        }
 
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const text = event.target.result;
-                localStorage.setItem('studioScript', text);
-                loadScriptToUI(text);
-            };
-            reader.readAsText(file);
-        });
+        // --- Dictionary Save/Load Logic ---
+        function saveScript() {
+            const name = document.getElementById('scriptNameInput').value.trim();
+            if (!name) return alert("Please enter a name for the script.");
+            if (!currentRawScript) return alert("Please upload a script first.");
 
+            let savedScripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
+            savedScripts[name] = currentRawScript;
+            localStorage.setItem('stageLead_savedScripts', JSON.stringify(savedScripts));
+            
+            alert(`Script "${name}" saved to library.`);
+            refreshScriptDropdown();
+        }
+
+        function refreshScriptDropdown() {
+            const dropdown = document.getElementById('savedScriptsDropdown');
+            let savedScripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
+            dropdown.innerHTML = '<option value="">-- Select --</option>';
+            for (const scriptName in savedScripts) {
+                const option = document.createElement('option');
+                option.value = scriptName;
+                option.textContent = scriptName;
+                dropdown.appendChild(option);
+            }
+        }
+
+        function loadSavedScript() {
+            const selectedName = document.getElementById('savedScriptsDropdown').value;
+            if (!selectedName) return;
+            let savedScripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
+            if (savedScripts[selectedName]) {
+                currentRawScript = savedScripts[selectedName];
+                document.getElementById('scriptNameInput').value = selectedName;
+                loadScriptToUI(currentRawScript);
+            }
+        }
+
+        // --- Rendering & Highlighting ---
         function loadScriptToUI(text) {
-            container.style.display = 'block';
-            filterWrap.style.display = 'block';
-            contentArea.innerText = text;
-
-            // Updated Regex to find all-caps names followed by a colon or space
-            const matches = text.match(/^[A-Z\s]{2,}(?=:|\s)/gm);
+            document.getElementById('script-container').style.display = 'block';
+            document.getElementById('filter-wrap').style.display = 'block';
+            
+            const matches = text.match(/^[A-Z\s]{2,}(?=:|\s)/gm) || [];
             const characters = [...new Set(matches)].map(name => name.trim()).filter(n => n.length > 1);
             
+            const selector = document.getElementById('charSelect');
             selector.innerHTML = '<option value="ALL">FULL ENSEMBLE</option>';
             characters.forEach(char => {
                 const opt = document.createElement('option');
@@ -101,36 +164,32 @@
                 opt.innerText = char;
                 selector.appendChild(opt);
             });
+
+            applyFocus();
         }
 
         function applyFocus() {
-            const focusChar = selector.value;
-            const originalText = localStorage.getItem('studioScript');
-            
-            if (focusChar === 'ALL') {
-                contentArea.innerHTML = originalText.split('\n').map(l => `<div>${l || '&nbsp;'}</div>`).join('');
-                return;
-            }
+            const focusChar = document.getElementById('charSelect').value;
+            const contentArea = document.getElementById('script-content');
+            if (!currentRawScript) return;
 
-            // Split by newline and map each line individually
-            const lines = originalText.split('\n');
+            const lines = currentRawScript.split('\n');
             contentArea.innerHTML = lines.map(line => {
-                const trimmedLine = line.trim();
-                // Check if the line starts with the character name
-                if (trimmedLine.startsWith(focusChar)) {
+                const trimmed = line.trim();
+                if (focusChar !== 'ALL' && trimmed.startsWith(focusChar)) {
                     return `<div class="highlight">${line}</div>`;
                 } else {
-                    // Use &nbsp; to preserve empty lines for spacing
-                    return `<div class="dimmed">${line || '&nbsp;'}</div>`;
+                    const dimClass = (focusChar === 'ALL') ? '' : 'dimmed';
+                    return `<div class="${dimClass}">${line || '&nbsp;'}</div>`;
                 }
             }).join('');
         }
 
-        function resetVault() {
-            if(confirm("Clear script?")) {
-                localStorage.removeItem('studioScript');
-                location.reload();
-            }
+        function clearDisplay() {
+            currentRawScript = "";
+            document.getElementById('script-container').style.display = 'none';
+            document.getElementById('filter-wrap').style.display = 'none';
+            document.getElementById('scriptNameInput').value = "";
         }
     </script>
 </body>

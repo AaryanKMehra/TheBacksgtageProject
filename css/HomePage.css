@@ -1,6 +1,8 @@
-/* Stage Lead Studio: Global Stylesheet 
-    Aesthetic: High-Contrast Studio Paper (Brutalist Industrial)
-*/
+/* =========================================
+   STAGE LEAD STUDIO: Master Stylesheet
+   Theme: High-Contrast Studio Paper 
+   Production: Housefull
+========================================= */
 
 :root {
     --bg-paper: #f9f7f2;      /* Eggshell Off-white */
@@ -14,6 +16,7 @@
     --shadow-brutal: 4px 4px 0px #1a1a1a;
 }
 
+/* --- Base Reset & Typography --- */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -29,7 +32,7 @@ body {
     min-height: 100vh;
 }
 
-/* Navigation: Studio Minimalist */
+/* --- Navigation --- */
 nav {
     position: sticky;
     top: 0;
@@ -51,11 +54,7 @@ nav {
     color: var(--accent-navy);
 }
 
-nav ul {
-    display: flex;
-    list-style: none;
-    gap: 2.5rem;
-}
+nav ul { display: flex; list-style: none; gap: 2.5rem; }
 
 nav a {
     color: var(--text-dim);
@@ -72,7 +71,7 @@ nav a:hover, nav a.active {
     border-bottom: 2px solid var(--border-ink);
 }
 
-/* Layout Containers */
+/* --- Layout Containers --- */
 main {
     padding: 3rem 2rem;
     max-width: 1200px;
@@ -100,7 +99,7 @@ h1 {
     box-shadow: var(--shadow-brutal);
 }
 
-/* UI Elements */
+/* --- UI Controls --- */
 button {
     background: var(--border-ink);
     color: var(--bg-paper);
@@ -113,15 +112,8 @@ button {
     transition: 0.2s ease;
 }
 
-button:hover {
-    background: var(--bg-paper);
-    color: var(--border-ink);
-}
-
-button.secondary {
-    background: transparent;
-    color: var(--border-ink);
-}
+button:hover { background: var(--bg-paper); color: var(--border-ink); }
+button.secondary { background: transparent; color: var(--border-ink); }
 
 input, select, textarea {
     background: var(--surface-white);
@@ -132,11 +124,11 @@ input, select, textarea {
     font-weight: 600;
 }
 
-/* Dynamic Stage Grid Blueprint */
+/* --- Stage Grid (Blueprint Logic) --- */
 #stage-grid-container {
     overflow-x: auto;
     padding: 10px;
-    background: #e5e5e5; /* Contrast background for the grid */
+    background: #e5e5e5;
     border: 2px solid var(--border-ink);
     box-shadow: var(--shadow-brutal);
 }
@@ -163,54 +155,72 @@ input, select, textarea {
     position: relative;
 }
 
-.cell:hover {
-    background: #fdfaf0;
+.cell:hover { background: #fdfaf0; }
+
+/* Tool Specifics */
+.cell.prop { background: #e8e8e8; color: var(--text-dim); }
+.cell.person { background: var(--accent-navy); color: #ffffff; }
+
+/* Movement & Arrows */
+.cell.moving { color: var(--movement-red); font-weight: 900; }
+.cell.moving::after { position: absolute; font-size: 1.5rem; font-weight: 900; }
+.cell.up::after { content: '↑'; bottom: 5px; }
+.cell.right::after { content: '→'; right: 5px; }
+.cell.down::after { content: '↓'; top: 5px; }
+.cell.left::after { content: '←'; left: 5px; }
+
+/* Action Beats (Hatched) */
+.cell.action {
+    background: repeating-linear-gradient(45deg, #fff, #fff 5px, #f2f2f2 5px, #f2f2f2 10px);
+    border: 2px solid var(--accent-navy);
+    color: var(--accent-navy);
+    font-style: italic;
 }
 
-/* Prop Types Styling */
-.cell.prop { 
-    background: #e8e8e8;
-    color: var(--text-dim);
-}
-
-.cell.person { 
-    background: var(--accent-navy); 
-    color: #ffffff; 
-}
-
-/* Movement Logic with Arrow Styling */
-.cell.moving { 
-    color: var(--movement-red);
-    font-weight: 900;
-}
-
-.cell.moving::after {
-    content: '→';
-    font-size: 1.2rem;
-    position: absolute;
-    bottom: 2px;
-}
-
-/* Script Display Typography */
+/* --- Script Vault Formatting --- */
 #script-content {
+    white-space: pre-wrap;
+    word-wrap: break-word;
     font-family: 'Courier New', Courier, monospace;
     font-size: 1rem;
     line-height: 1.7;
-    color: var(--text-ink);
 }
 
-/* Cue Sheet Highlights */
-.cue-item.active-cue {
-    background: #fffbe6;
-    border: 2px solid var(--border-ink);
+.highlight {
+    background-color: var(--accent-navy);
+    color: #ffffff !important;
+    padding: 4px 8px;
+    font-weight: bold;
+    display: block; 
+    min-height: 1.2em;
 }
 
-.cue-item.done {
-    opacity: 0.3;
-    filter: grayscale(1);
+.dimmed {
+    opacity: 0.2;
+    transition: opacity 0.3s ease;
+    display: block;
+    min-height: 1.2em;
 }
 
-/* Responsive Adjustments */
+/* --- Cue Sheet Logic --- */
+.cue-item.active-cue { background: #fffbe6; border: 2px solid var(--border-ink); }
+.cue-item.done { opacity: 0.3; filter: grayscale(1); }
+
+/* --- CREW VIEW RESTRICTIONS --- */
+body.crew-view .director-only { display: none !important; }
+body.crew-view select { pointer-events: auto; } /* Let crew use dropdowns */
+
+/* Disable form inputs for crew unless explicitly allowed above */
+body.crew-view button:not(.secondary), 
+body.crew-view input[type="text"], 
+body.crew-view textarea {
+    display: none !important; 
+}
+
+/* Let crew click grid but not edit it */
+body.crew-view .cell { pointer-events: none; }
+
+/* --- Responsive Adjustments --- */
 @media (max-width: 768px) {
     nav { padding: 1rem 2rem; }
     nav ul { gap: 1rem; }

@@ -3,53 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <title>Map | Stage Lead Studio</title>
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        /* Directional arrow rotations */
-        .cell.up::after { content: '↑'; bottom: 5px; }
-        .cell.right::after { content: '→'; right: 5px; }
-        .cell.down::after { content: '↓'; top: 5px; }
-        .cell.left::after { content: '←'; left: 5px; }
-        
-        .cell.moving::after {
-            position: absolute;
-            font-size: 1.5rem;
-            font-weight: 900;
-            color: var(--movement-red);
-        }
-
-        /* New Action Tool Styling: Hatched Pattern */
-        .cell.action {
-            background: repeating-linear-gradient(
-                45deg,
-                #fff,
-                #fff 5px,
-                #f2f2f2 5px,
-                #f2f2f2 10px
-            );
-            border: 2px solid var(--accent-navy);
-            color: var(--accent-navy);
-            font-style: italic;
-        }
-    </style>
+    <link rel="stylesheet" href="css/HomePage.css">
 </head>
 <body>
+
     <nav>
         <div class="logo">STAGE LEAD</div>
         <ul>
             <li><a href="index.html">Vault</a></li>
             <li><a href="props.html" class="active">Map</a></li>
             <li><a href="cues.html">Cues</a></li>
-            <li><a href="analytics.html">Analytics</a></li>
+            <li><a href="analytics.html" id="nav-analytics">Analytics</a></li>
         </ul>
     </nav>
 
     <main>
-        <div class="section-header">
-            <h1>Stage Layout & Blocking</h1>
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <h1 id="page-title">Stage Layout & Blocking</h1>
+            <span id="role-badge" style="font-size: 0.7rem; font-weight: bold; padding: 4px 8px; background: var(--border-ink); color: var(--bg-paper); border-radius: 4px;">DIRECTOR</span>
         </div>
 
-        <div class="studio-card" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
+        <div class="studio-card director-only" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;">
+            <div style="display: flex; gap: 10px; align-items: center; flex-grow: 1;">
+                <input type="text" id="mapNameInput" placeholder="Name this map (e.g., Act 1 Set)" style="flex-grow: 1;">
+                <button onclick="saveMap()">Save Map</button>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <label style="font-weight: bold; font-size: 0.8rem;">LOAD SAVED:</label>
+                <select id="savedMapsDropdown" onchange="loadSavedMap()">
+                    <option value="">-- Select a Map --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="studio-card director-only" style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
             <div class="input-group">
                 <label style="display:block; font-size:0.6rem; margin-bottom:5px; color:var(--text-dim);">STAGE WIDTH (COLS)</label>
                 <input type="number" id="gridW" value="8" min="2" max="15">
@@ -61,7 +48,7 @@
             <button onclick="buildStage()">Update Dimensions</button>
         </div>
 
-        <div class="studio-card" style="display: flex; gap: 15px; align-items: center; border-color: var(--accent-navy);">
+        <div class="studio-card director-only" style="display: flex; gap: 15px; align-items: center; border-color: var(--accent-navy); flex-wrap: wrap;">
             <select id="tool" onchange="toggleDirSelector()">
                 <option value="prop">Furniture/Prop</option>
                 <option value="person">Cast Member</option>
@@ -70,7 +57,7 @@
             </select>
             
             <div id="dir-wrap" style="display:none; gap: 10px; align-items: center;">
-                <label style="font-size: 0.6rem; font-weight: 800;">DIRECTION:</label>
+                <label style="font-size: 0.6rem; font-weight: 800;">DIR:</label>
                 <select id="direction">
                     <option value="up">UP (↑)</option>
                     <option value="right" selected>RIGHT (→)</option>
@@ -79,27 +66,52 @@
                 </select>
             </div>
 
-            <input type="text" id="label" placeholder="Label (e.g. Aman / Phone Rings)" style="flex-grow:1;">
+            <input type="text" id="label" placeholder="Label (e.g. Aman / Phone)" style="flex-grow:1;">
         </div>
 
         <div id="stage-grid-container">
             <div id="stage-grid"></div>
         </div>
 
-        <div style="margin-top: 2rem;">
+        <div style="margin-top: 2rem;" class="director-only">
             <button class="secondary" onclick="clearStage()">Wipe Blueprint</button>
         </div>
     </main>
 
     <script>
         const gridElement = document.getElementById('stage-grid');
-        let stageData = JSON.parse(localStorage.getItem('studioMapData')) || {};
+        let stageData = {};
 
+        // --- Role & View Logic ---
+        window.onload = () => {
+            const role = localStorage.getItem('userRole');
+            if (role === 'crew') {
+                document.body.classList.add('crew-view');
+                document.getElementById('nav-analytics').style.display = 'none';
+                document.getElementById('page-title').innerText = "Stage Layout (Crew View)";
+                document.getElementById('role-badge').innerText = "CREW";
+                document.getElementById('role-badge').style.background = "var(--text-dim)";
+            }
+            
+            // Load current working map if it exists
+            const currentData = JSON.parse(localStorage.getItem('studioMapData'));
+            if (currentData) {
+                stageData = currentData.data || {};
+                document.getElementById('gridW').value = currentData.width || 8;
+                document.getElementById('gridH').value = currentData.height || 6;
+            }
+            
+            refreshMapDropdown();
+            buildStage();
+        };
+
+        // --- Tool Logic ---
         function toggleDirSelector() {
             const tool = document.getElementById('tool').value;
             document.getElementById('dir-wrap').style.display = (tool === 'moving') ? 'flex' : 'none';
         }
 
+        // --- Grid Builder ---
         function buildStage() {
             const w = document.getElementById('gridW').value;
             const h = document.getElementById('gridH').value;
@@ -107,6 +119,9 @@
             gridElement.style.gridTemplateColumns = `repeat(${w}, 1fr)`;
             gridElement.style.width = `${w * 70}px`; 
             gridElement.innerHTML = '';
+
+            // Update current working memory
+            localStorage.setItem('studioMapData', JSON.stringify({ width: w, height: h, data: stageData }));
 
             for (let i = 0; i < (w * h); i++) {
                 const cell = document.createElement('div');
@@ -117,6 +132,8 @@
                 }
 
                 cell.onclick = () => {
+                    if (document.body.classList.contains('crew-view')) return; // Extra protection
+                    
                     if (cell.dataset.active === "true") {
                         cell.className = 'cell';
                         cell.innerText = '';
@@ -131,7 +148,7 @@
                         applyCellState(cell, state);
                         stageData[i] = state;
                     }
-                    localStorage.setItem('studioMapData', JSON.stringify(stageData));
+                    localStorage.setItem('studioMapData', JSON.stringify({ width: w, height: h, data: stageData }));
                 };
                 gridElement.appendChild(cell);
             }
@@ -146,12 +163,56 @@
         function clearStage() {
             if(confirm("Wipe all data from the stage blueprint?")) {
                 stageData = {};
-                localStorage.removeItem('studioMapData');
                 buildStage();
             }
         }
 
-        window.onload = buildStage;
+        // --- Save / Load Map Logic ---
+        function saveMap() {
+            const name = document.getElementById('mapNameInput').value.trim();
+            if (!name) return alert("Please enter a name for this map.");
+
+            const w = document.getElementById('gridW').value;
+            const h = document.getElementById('gridH').value;
+
+            const mapPackage = { width: w, height: h, data: stageData };
+
+            let savedMaps = JSON.parse(localStorage.getItem('stageLead_savedMaps')) || {};
+            savedMaps[name] = mapPackage;
+            
+            localStorage.setItem('stageLead_savedMaps', JSON.stringify(savedMaps));
+            alert(`Map "${name}" saved successfully!`);
+            refreshMapDropdown();
+        }
+
+        function refreshMapDropdown() {
+            const dropdown = document.getElementById('savedMapsDropdown');
+            let savedMaps = JSON.parse(localStorage.getItem('stageLead_savedMaps')) || {};
+            
+            dropdown.innerHTML = '<option value="">-- Select a Map --</option>';
+            for (const mapName in savedMaps) {
+                const option = document.createElement('option');
+                option.value = mapName;
+                option.textContent = mapName;
+                dropdown.appendChild(option);
+            }
+        }
+
+        function loadSavedMap() {
+            const selectedName = document.getElementById('savedMapsDropdown').value;
+            if (!selectedName) return;
+
+            let savedMaps = JSON.parse(localStorage.getItem('stageLead_savedMaps')) || {};
+            const mapPackage = savedMaps[selectedName];
+
+            if (mapPackage) {
+                document.getElementById('gridW').value = mapPackage.width;
+                document.getElementById('gridH').value = mapPackage.height;
+                stageData = mapPackage.data || {};
+                document.getElementById('mapNameInput').value = selectedName;
+                buildStage();
+            }
+        }
     </script>
 </body>
 </html>

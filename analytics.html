@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Analytics | Stage Lead Studio</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/HomePage.css">
+    <script>
+        // --- HARD LOCK FOR CREW ---
+        // If a crew member tries to access this page, redirect them immediately.
+        if (localStorage.getItem('userRole') === 'crew') {
+            window.location.replace('index.html');
+        }
+    </script>
     <style>
         .analytics-grid {
             display: grid;
@@ -17,6 +24,7 @@
             font-family: 'Courier New', Courier, monospace;
             margin: 2rem 0;
             letter-spacing: -2px;
+            color: var(--text-ink);
         }
 
         .note-vault {
@@ -27,26 +35,29 @@
 
         #notesArea {
             flex-grow: 1;
-            background: #000;
-            border: 1px solid var(--border-subtle);
-            color: var(--accent-white);
+            background: var(--surface-white);
+            border: 2px solid var(--border-ink);
+            color: var(--text-ink);
             padding: 1.5rem;
             font-family: var(--font-main);
             resize: none;
             line-height: 1.8;
+            font-weight: 500;
         }
 
         .summary-metric {
-            font-size: 0.6rem;
+            font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 2px;
-            color: var(--accent-grey);
+            color: var(--text-dim);
             margin-bottom: 0.5rem;
+            font-weight: 800;
         }
 
         .metric-value {
-            font-size: 1.5rem;
-            font-weight: 700;
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--accent-navy);
         }
 
         @media (max-width: 900px) {
@@ -55,8 +66,9 @@
     </style>
 </head>
 <body>
+
     <nav>
-        <div class="logo">TheBackstageProject</div>
+        <div class="logo">STAGE LEAD</div>
         <ul>
             <li><a href="index.html">Vault</a></li>
             <li><a href="props.html">Map</a></li>
@@ -66,8 +78,9 @@
     </nav>
 
     <main>
-        <div class="section-header">
+        <div class="section-header" style="display: flex; justify-content: space-between; align-items: flex-end;">
             <h1>Performance Analytics</h1>
+            <span id="role-badge" style="font-size: 0.7rem; font-weight: bold; padding: 4px 8px; background: var(--accent-navy); color: var(--surface-white); border-radius: 4px;">DIRECTOR ONLY</span>
         </div>
 
         <div class="analytics-grid">
@@ -82,31 +95,35 @@
 
             <div class="studio-card note-vault">
                 <div class="summary-metric">Director's Note Vault</div>
-                <textarea id="notesArea" placeholder="Log adjustments for Aman, Faith, and the technical crew..."></textarea>
+                <textarea id="notesArea" placeholder="Log adjustments here. (e.g. Ensure Faith Farrell hits her mark during the blackout, keep Aman's dialogue conversational and punchy rather than using physical comedy...)"></textarea>
             </div>
         </div>
 
         <div class="studio-card">
             <div class="summary-metric">Production Status Summary</div>
-            <div style="display: flex; gap: 40px; margin-top: 1rem;">
+            <div style="display: flex; gap: 40px; margin-top: 1rem; flex-wrap: wrap;">
                 <div>
                     <div class="summary-metric">Cues Executed</div>
                     <div id="cue-stat" class="metric-value">0 / 0</div>
                 </div>
                 <div>
-                    <div class="summary-metric">Stage Complexity</div>
-                    <div id="prop-stat" class="metric-value">0 Elements</div>
+                    <div class="summary-metric">Active Map Elements</div>
+                    <div id="prop-stat" class="metric-value">0</div>
+                </div>
+                <div>
+                    <div class="summary-metric">Saved Scripts</div>
+                    <div id="script-stat" class="metric-value">0</div>
                 </div>
             </div>
         </div>
     </main>
 
     <script>
+        // --- Timer Logic ---
         let timerRunning = false;
         let timeElapsed = parseInt(localStorage.getItem('studioTime')) || 0;
         let interval;
 
-        // Initialize Notes and Data
         window.onload = () => {
             const notes = document.getElementById('notesArea');
             notes.value = localStorage.getItem('studioNotes') || "";
@@ -116,6 +133,9 @@
             
             updateDisplay();
             calculateSummary();
+            
+            // Refresh summary every few seconds in case other tabs updated data
+            setInterval(calculateSummary, 2000);
         };
 
         function toggleTimer() {
@@ -123,7 +143,7 @@
             if (!timerRunning) {
                 timerRunning = true;
                 btn.innerText = "Stop Session";
-                btn.style.background = "var(--movement-blue)";
+                btn.style.background = "var(--movement-red)";
                 btn.style.color = "#fff";
                 interval = setInterval(() => {
                     timeElapsed++;
@@ -133,8 +153,8 @@
             } else {
                 timerRunning = false;
                 btn.innerText = "Resume Session";
-                btn.style.background = "var(--accent-white)";
-                btn.style.color = "var(--bg-deep)";
+                btn.style.background = "var(--border-ink)";
+                btn.style.color = "var(--bg-paper)";
                 clearInterval(interval);
             }
         }
@@ -143,7 +163,7 @@
             const h = String(Math.floor(timeElapsed / 3600)).padStart(2, '0');
             const m = String(Math.floor((timeElapsed % 3600) / 60)).padStart(2, '0');
             const s = String(timeElapsed % 60).padStart(2, '0');
-            document.getElementById('timer-display').innerText = `${h}:${m}:${secs = s}`;
+            document.getElementById('timer-display').innerText = `${h}:${m}:${s}`;
         }
 
         function resetTimer() {
@@ -153,20 +173,28 @@
                 timeElapsed = 0;
                 localStorage.setItem('studioTime', 0);
                 updateDisplay();
-                document.getElementById('startBtn').innerText = "Start Session";
+                const btn = document.getElementById('startBtn');
+                btn.innerText = "Start Session";
+                btn.style.background = "var(--border-ink)";
+                btn.style.color = "var(--bg-paper)";
             }
         }
 
+        // --- Data Aggregation Logic ---
         function calculateSummary() {
-            // Pull data from other pages via LocalStorage
+            // 1. Cues
             const cues = JSON.parse(localStorage.getItem('studioCues')) || [];
-            const props = JSON.parse(localStorage.getItem('studioMapData')) || {};
-            
             const doneCues = cues.filter(c => c.status === 'done').length;
-            const propCount = Object.keys(props).length;
-
             document.getElementById('cue-stat').innerText = `${doneCues} / ${cues.length}`;
-            document.getElementById('prop-stat').innerText = `${propCount} Elements`;
+
+            // 2. Map Elements (from current working map)
+            const mapData = JSON.parse(localStorage.getItem('studioMapData')) || {};
+            const elements = mapData.data ? Object.keys(mapData.data).length : 0;
+            document.getElementById('prop-stat').innerText = elements;
+
+            // 3. Saved Scripts
+            const savedScripts = JSON.parse(localStorage.getItem('stageLead_savedScripts')) || {};
+            document.getElementById('script-stat').innerText = Object.keys(savedScripts).length;
         }
     </script>
 </body>
